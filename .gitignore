@@ -1,0 +1,10 @@
+# Python
+__pycache__/
+*.pyc
+
+# Virtual Environment
+venv_calib/
+
+# Calibration Data - Ignore images, but storing camera_params.npz
+calib_images/
+
