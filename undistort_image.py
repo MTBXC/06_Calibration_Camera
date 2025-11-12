@@ -17,13 +17,13 @@ def undistort_and_display(image_path, params_file):
         with np.load(params_file) as X:
             mtx, dist = [X[i] for i in ('mtx', 'dist')]
     except FileNotFoundError:
-        print(f"❌ Error: Calibration file '{params_file}' not found.")
+        print(f"Error: Calibration file '{params_file}' not found.")
         return
         
     # 2. Load the image to correct
     img = cv2.imread(image_path)
     if img is None:
-        print(f"❌ Error: Test image '{image_path}' not found.")
+        print(f"Error: Test image '{image_path}' not found.")
         return
 
     h, w = img.shape[:2]
@@ -43,7 +43,7 @@ def undistort_and_display(image_path, params_file):
 
     # 6. Save and display the result
     cv2.imwrite(OUTPUT_IMAGE_PATH, dst)
-    print(f"\n✅ Corrected image saved to: {OUTPUT_IMAGE_PATH}")
+    print(f"\nCorrected image saved to: {OUTPUT_IMAGE_PATH}")
     
     # Displaying the results (may fail due to GTK error, use NoMachine to view saved file if necessary)
     try:
@@ -56,7 +56,7 @@ def undistort_and_display(image_path, params_file):
         cv2.waitKey(0)
         cv2.destroyAllWindows()
     except cv2.error:
-        print("❗ Warning: Could not display images (GTK error). Please check the 'corrected_image.png' file.")
+        print("Warning: Could not display images (GTK error). Please check the 'corrected_image.png' file.")
 
 
 if __name__ == "__main__":

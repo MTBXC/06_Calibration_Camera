@@ -4,30 +4,26 @@ import glob
 import os
 
 # --- CONFIGURATION ---
-# Define the size of the chessboard used for calibration
 CHESSBOARD_SIZE = (7, 7) # Inner corners count 
-SQUARE_SIZE_MM = 17.00    # Real-world size of one square side (e.g., 20.0 mm)
+SQUARE_SIZE_MM = 17.00   # Real-world size of one square side (mm)
 OUTPUT_FILE = 'camera_params.npz'
-IMAGE_FOLDER = 'calib_images' # The folder where you saved the images
+IMAGE_FOLDER = 'calib_images'
 
-# Criteria for the SubPixel algorithm (improves corner detection accuracy)
+# Criteria for SubPixel refinement
 criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
 # --- OBJECT POINTS PREPARATION ---
-# Prepare "object points" (3D points). Assuming the chessboard is on Z=0 plane.
-# objp will be a 3D grid representing the real-world coordinates of the corners.
+# Prepare 3D points (x, y, z=0)
 objp = np.zeros((CHESSBOARD_SIZE[0] * CHESSBOARD_SIZE[1], 3), np.float32)
-# Generates coordinates (x, y, z) in real-world space, scaled by SQUARE_SIZE_MM
 objp[:, :2] = np.mgrid[0:CHESSBOARD_SIZE[0], 0:CHESSBOARD_SIZE[1]].T.reshape(-1, 2) * SQUARE_SIZE_MM
 
-# Arrays to store all object points (3D) and image points (2D) from all images
-objpoints = []  # 3D point in real world space
-imgpoints = []  # 2D points in image plane (pixel coordinates)
+# Storage for 3D points (objpoints) and 2D points (imgpoints)
+objpoints = []
+imgpoints = []
 
 # --- IMAGE PROCESSING ---
 print("--- Starting Calibration Image Processing ---")
 
-# Load all images from the calib_images folder
 images = glob.glob(os.path.join(IMAGE_FOLDER, 'calib_image_*.png'))
 
 for fname in images:
@@ -38,54 +34,46 @@ for fname in images:
 
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    # Find the corners on the chessboard pattern
+    # Find the chessboard corners
     ret, corners = cv2.findChessboardCorners(gray, CHESSBOARD_SIZE, None)
 
-    # If corners are found, add object points and refine image points
     if ret == True:
         objpoints.append(objp)
 
-        # Refine corner positions to sub-pixel accuracy
+        # Sub-pixel refinement
         corners2 = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
         imgpoints.append(corners2)
 
-        # Optional: Display the detected corners (may fail due to GTK error, but try)
+        # Display detected corners
         try:
             img = cv2.drawChessboardCorners(img, CHESSBOARD_SIZE, corners2, ret)
             cv2.imshow('Detected Corners', img)
-            cv2.waitKey(100) # Short delay for viewing
+            cv2.waitKey(100)
         except cv2.error:
-            # Continue processing if display fails (due to GTK error)
-            pass 
+            pass # Ignore display errors
     else:
-        print(f"❌ Failed to find chessboard corners in: {fname}")
+        print(f"Failed to find chessboard corners in: {fname}")
 
 cv2.destroyAllWindows()
 
 # --- CALIBRATION CALCULATION ---
-if len(imgpoints) > 5: # Need a sufficient number of valid images (min ~5-10)
-    print(f"\n✅ Found {len(imgpoints)} valid images. Calculating calibration...")
+if len(imgpoints) > 5:
+    print(f"\nFound {len(imgpoints)} valid images. Calculating calibration...")
     
-    # The core calibration function:
-    # It returns: ret, camera_matrix (mtx), distortion_coefficients (dist), 
-    # rotation_vectors (rvecs), translation_vectors (tvecs)
+    # Core calibration function
     ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(
         objpoints, imgpoints, gray.shape[::-1], None, None
     )
 
     if ret:
         print("\n--- Calibration Results ---")
-        # Camera Matrix K: focal lengths (fx, fy) and principal point (cx, cy)
-        # $K = \begin{pmatrix} f_x & 0 & c_x \\ 0 & f_y & c_y \\ 0 & 0 & 1 \end{pmatrix}$
-        print("\nCamera Matrix (Intrinsic Matrix - K):")
+        print("\nCamera Matrix (K):")
         print(mtx) 
         
-        # Distortion Coefficients D: radial (k1, k2, k3) and tangential (p1, p2)
-        # $D = (k_1, k_2, p_1, p_2, k_3)$
         print("\nDistortion Coefficients (D):")
         print(dist)
 
-        # Calculate Reprojection Error (a measure of accuracy)
+        # Calculate Reprojection Error
         mean_error = 0
         for i in range(len(objpoints)):
             imgpoints2, _ = cv2.projectPoints(objpoints[i], rvecs[i], tvecs[i], mtx, dist)
@@ -97,15 +85,15 @@ if len(imgpoints) > 5: # Need a sufficient number of valid images (min ~5-10)
         
         # --- SAVING RESULTS ---
         np.savez(OUTPUT_FILE, mtx=mtx, dist=dist)
-        print(f"\n✅ Calibration parameters saved to '{OUTPUT_FILE}'")
+        print(f"\nCalibration parameters saved to '{OUTPUT_FILE}'")
         
-        # Reprojection Error Guidelines:
+        # Simple error assessment
         if avg_error > 1.0:
-            print("❗ NOTE: Reprojection error is high. Consider re-taking calibration images.")
+            print("NOTE: Reprojection error is high.")
         elif avg_error < 0.5:
-             print("👍 EXCELLENT: Reprojection error is low, calibration is highly accurate.")
+             print("EXCELLENT: Calibration highly accurate.")
 
     else:
-        print("\n❌ ERROR: Calibration calculation failed.")
+        print("\nERROR: Calibration calculation failed.")
 else:
-    print("❌ ERROR: Not enough valid images found for calibration (need at least 5-10).")
+    print("ERROR: Not enough valid images found.")

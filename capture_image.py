@@ -34,7 +34,7 @@ def capture_calibration_images(source=CAPTURE_SOURCE):
         cap = cv2.VideoCapture(source, cv2.CAP_GSTREAMER)
 
     if not cap.isOpened():
-        print("❌ Error: Could not open camera. Check the index (0, 1, ...) or GStreamer string.")
+        print("Error: Could not open camera. Check the index (0, 1, ...) or GStreamer string.")
         return
 
     print("\n--- Starting Capture ---")

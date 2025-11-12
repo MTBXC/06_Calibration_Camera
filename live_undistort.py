@@ -31,14 +31,14 @@ def live_undistortion(source=CAPTURE_SOURCE, params_file=PARAMS_FILE):
         with np.load(params_file) as X:
             mtx, dist = [X[i] for i in ('mtx', 'dist')]
     except FileNotFoundError:
-        print(f"❌ Error: Calibration file '{params_file}' not found. Run calibrate_camera.py first.")
+        print(f"Error: Calibration file '{params_file}' not found. Run calibrate_camera.py first.")
         return
         
     # 2. Camera initialization
     cap = cv2.VideoCapture(source, cv2.CAP_GSTREAMER)
 
     if not cap.isOpened():
-        print("❌ Error: Could not open camera.")
+        print("Error: Could not open camera.")
         return
 
     # Define frame size (must match GStreamer pipeline and calibration resolution)
@@ -51,7 +51,7 @@ def live_undistortion(source=CAPTURE_SOURCE, params_file=PARAMS_FILE):
 
     print("\n--- Starting Live Undistortion ---")
     print("-> Press 'q' on the image window to QUIT.")
-    print("⚠️ WARNING: Live display may fail due to GTK initialization errors on remote desktop.")
+    print("WARNING: Live display may fail due to GTK initialization errors on remote desktop.")
 
     # Scale factor for displaying large 1920x1080 frames on screen
     SCALE_FACTOR = 0.5 
@@ -75,18 +75,14 @@ def live_undistortion(source=CAPTURE_SOURCE, params_file=PARAMS_FILE):
             cv2.imshow('01 - ORIGINAL (Distorted)', display_orig)
             cv2.imshow('02 - CORRECTED (Undistorted)', display_corr)
         except cv2.error:
-             # This block handles the expected GTK error if it occurs
-             print("❌ GTK Error detected. Display failed. Continuing in headless mode...")
-             # Usuwamy okna, żeby nie generowały kolejnych błędów
+             print("GTK Error detected. Display failed. Continuing in headless mode...")
              cv2.destroyAllWindows() 
 
         # 7. Check for exit key (q)
-        # cv2.waitKey(1) is essential for window refreshing
         key = cv2.waitKey(1) & 0xFF
         if key == ord('q'):
             break
         
-    # 8. Release resources
     cap.release()
     cv2.destroyAllWindows()
     print("\n--- Processing Finished ---")
